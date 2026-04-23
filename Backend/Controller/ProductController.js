@@ -3,16 +3,18 @@ const { cloudinary } = require("../Util/cloudinary");
 
 exports.createProduct = async (req, res) => {
   try {
-    if (!req.files || req.files.length === 0) {
+    if (!req.body.image) {
       return res
         .status(400)
-        .json({ success: false, message: "Please upload at least one image" });
+        .json({ success: false, message: "Please provide a product image" });
     }
 
-    const images = req.files.map((file) => ({
-      url: file.path,
-      public_id: file.filename,
-    }));
+    const images = [
+      {
+        url: req.body.image,
+        public_id: req.body.public_id || "none",
+      },
+    ];
 
     const product = await Product.create({
       ...req.body,
@@ -22,6 +24,7 @@ exports.createProduct = async (req, res) => {
 
     res.status(201).json({ success: true, data: product });
   } catch (err) {
+    console.error("Create Product Error:", err.message);
     res.status(400).json({ success: false, message: err.message });
   }
 };
@@ -34,7 +37,7 @@ exports.getProducts = async (req, res) => {
     );
     res
       .status(200)
-      .json({ success: true, count: products.length, data: products });
+      .json({ success: true, count: products.length, products: products }); // Ensure key matches action (products)
   } catch (err) {
     res.status(500).json({ success: false, message: "Server Error" });
   }
@@ -56,18 +59,14 @@ exports.updateProduct = async (req, res) => {
     ) {
       return res
         .status(401)
-        .json({
-          success: false,
-          message: "Not authorized to update this product",
-        });
+        .json({ success: false, message: "Not authorized" });
     }
-
-    if (req.files && req.files.length > 0) {
-      const newImages = req.files.map((file) => ({
-        url: file.path,
-        public_id: file.filename,
-      }));
-      req.body.images = [...product.images, ...newImages];
+    if (req.body.image) {
+      const newImage = {
+        url: req.body.image,
+        public_id: req.body.public_id || "none",
+      };
+      req.body.images = [newImage];
     }
 
     product = await Product.findByIdAndUpdate(req.params.id, req.body, {
@@ -106,12 +105,10 @@ exports.deleteProduct = async (req, res) => {
 
     await product.deleteOne();
 
-    res
-      .status(200)
-      .json({
-        success: true,
-        message: "Product and associated images deleted",
-      });
+    res.status(200).json({
+      success: true,
+      message: "Product and associated images deleted",
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
