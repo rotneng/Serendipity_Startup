@@ -3,23 +3,16 @@ const { cloudinary } = require("../Util/cloudinary");
 
 exports.createProduct = async (req, res) => {
   try {
-    if (!req.body.image) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Please provide a product image" });
+    if (!req.body.images || req.body.images.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide at least one product image",
+      });
     }
-
-    const images = [
-      {
-        url: req.body.image,
-        public_id: req.body.public_id || "none",
-      },
-    ];
 
     const product = await Product.create({
       ...req.body,
       farmer: req.user.id,
-      images: images,
     });
 
     res.status(201).json({ success: true, data: product });
@@ -37,7 +30,7 @@ exports.getProducts = async (req, res) => {
     );
     res
       .status(200)
-      .json({ success: true, count: products.length, products: products }); // Ensure key matches action (products)
+      .json({ success: true, count: products.length, products: products });
   } catch (err) {
     res.status(500).json({ success: false, message: "Server Error" });
   }
@@ -61,18 +54,18 @@ exports.updateProduct = async (req, res) => {
         .status(401)
         .json({ success: false, message: "Not authorized" });
     }
-    if (req.body.image) {
-      const newImage = {
-        url: req.body.image,
-        public_id: req.body.public_id || "none",
-      };
-      req.body.images = [newImage];
-    }
 
-    product = await Product.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
+    if (req.body.images) {
+      product = await Product.findByIdAndUpdate(req.params.id, req.body, {
+        new: true,
+        runValidators: true,
+      });
+    } else {
+      product = await Product.findByIdAndUpdate(req.params.id, req.body, {
+        new: true,
+        runValidators: true,
+      });
+    }
 
     res.status(200).json({ success: true, data: product });
   } catch (err) {
@@ -98,9 +91,11 @@ exports.deleteProduct = async (req, res) => {
         .status(401)
         .json({ success: false, message: "Not authorized" });
     }
-    const deletePromises = product.images.map((img) =>
-      cloudinary.uploader.destroy(img.public_id),
-    );
+
+    const deletePromises = product.images
+      .filter((img) => img.public_id && img.public_id !== "none")
+      .map((img) => cloudinary.uploader.destroy(img.public_id));
+
     await Promise.all(deletePromises);
 
     await product.deleteOne();

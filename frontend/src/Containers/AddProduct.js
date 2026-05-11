@@ -8,11 +8,12 @@ import {
   PlusCircle,
   Scale,
   Loader2,
-  CheckCircle2,
   AlertCircle,
   LayoutGrid,
   AlignLeft,
   MapPin,
+  Image as ImageIcon,
+  X,
 } from "lucide-react";
 
 const AddProduct = () => {
@@ -23,12 +24,11 @@ const AddProduct = () => {
     description: "",
     stockQuantity: "",
     location: "",
-    image: "",
-    public_id: "",
+    images: [],
   });
 
   const [uploading, setUploading] = useState(false);
-  const [preview, setPreview] = useState(null);
+  const [previews, setPreviews] = useState([]);
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -44,45 +44,61 @@ const AddProduct = () => {
   }, [success, navigate]);
 
   const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
 
-    setPreview(URL.createObjectURL(file));
+    const newPreviews = files.map((file) => URL.createObjectURL(file));
+    setPreviews((prev) => [...prev, ...newPreviews]);
     setUploading(true);
 
-    const data = new FormData();
-    data.append("file", file);
-    data.append("upload_preset", "serendipity_preset");
     const cloudName = "dfyxnv967";
+    const uploadPreset = "serendipity_preset";
+    const uploadedImageData = [];
 
     try {
-      const resp = await fetch(
-        `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
-        { method: "POST", body: data },
-      );
+      for (const file of files) {
+        const data = new FormData();
+        data.append("file", file);
+        data.append("upload_preset", uploadPreset);
 
-      const res = await resp.json();
+        const resp = await fetch(
+          `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+          { method: "POST", body: data },
+        );
 
-      if (resp.ok) {
-        setProductData((prev) => ({
-          ...prev,
-          image: res.secure_url,
-          public_id: res.public_id,
-        }));
-        setUploading(false);
-      } else {
-        alert(res.error?.message || "Upload failed");
-        setUploading(false);
+        const res = await resp.json();
+
+        if (resp.ok) {
+          uploadedImageData.push({
+            url: res.secure_url,
+            public_id: res.public_id,
+          });
+        }
       }
+
+      setProductData((prev) => ({
+        ...prev,
+        images: [...prev.images, ...uploadedImageData],
+      }));
+      setUploading(false);
     } catch (err) {
       setUploading(false);
-      alert("Cloudinary connection error.");
+      alert("Error uploading images to Cloudinary.");
     }
+  };
+
+  const removeImage = (index) => {
+    setProductData((prev) => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index),
+    }));
+    setPreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!productData.image) return alert("Please upload an image first!");
+    if (productData.images.length === 0)
+      return alert("Please upload at least one image!");
 
     const finalData = {
       ...productData,
@@ -169,19 +185,40 @@ const AddProduct = () => {
       backgroundColor: "white",
       cursor: "pointer",
     },
-    fileInput: {
-      padding: "10px",
+    fileInputContainer: {
       border: `2px dashed ${colors.border}`,
       borderRadius: "8px",
-      width: "100%",
+      padding: "20px",
+      textAlign: "center",
       cursor: "pointer",
+      position: "relative",
     },
-    imagePreview: {
-      width: "100px",
-      height: "100px",
-      objectFit: "cover",
+    previewGrid: {
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))",
+      gap: "10px",
+      marginTop: "15px",
+    },
+    previewItem: {
+      position: "relative",
+      width: "100%",
+      aspectRatio: "1/1",
       borderRadius: "8px",
+      overflow: "hidden",
       border: `1px solid ${colors.border}`,
+    },
+    previewImg: { width: "100%", height: "100%", objectFit: "cover" },
+    removeBtn: {
+      position: "absolute",
+      top: "4px",
+      right: "4px",
+      backgroundColor: colors.error,
+      color: "white",
+      border: "none",
+      borderRadius: "50%",
+      cursor: "pointer",
+      padding: "4px",
+      display: "flex",
     },
     button: {
       backgroundColor: colors.secondary,
@@ -219,7 +256,7 @@ const AddProduct = () => {
           <div>
             <h1 style={{ margin: 0, fontSize: "1.5rem" }}>Add Product</h1>
             <p style={{ margin: 0, opacity: 0.8 }}>
-              Upload your fresh harvest to the market
+              Showcase your harvest with multiple photos
             </p>
           </div>
         </div>
@@ -237,7 +274,7 @@ const AddProduct = () => {
             <input
               style={styles.input}
               type="text"
-              placeholder="e.g. Fresh Red Strawberries"
+              placeholder="e.g. Ogbomosho Mangoes"
               required
               value={productData.name}
               onChange={(e) =>
@@ -272,7 +309,6 @@ const AddProduct = () => {
               <input
                 style={styles.input}
                 type="number"
-                placeholder="5000"
                 required
                 value={productData.price}
                 onChange={(e) =>
@@ -286,7 +322,6 @@ const AddProduct = () => {
               <input
                 style={styles.input}
                 type="number"
-                placeholder="Number of units"
                 required
                 value={productData.stockQuantity}
                 onChange={(e) =>
@@ -300,12 +335,11 @@ const AddProduct = () => {
           </div>
 
           <div style={styles.inputGroup}>
-            <label style={styles.label}>Farm/Product Location</label>
+            <label style={styles.label}>Location</label>
             <MapPin size={18} style={styles.icon} />
             <input
               style={styles.input}
               type="text"
-              placeholder="e.g. Jos, Plateau State"
               required
               value={productData.location}
               onChange={(e) =>
@@ -319,7 +353,6 @@ const AddProduct = () => {
             <AlignLeft size={18} style={styles.icon} />
             <textarea
               style={styles.textarea}
-              placeholder="Tell buyers about your produce..."
               required
               value={productData.description}
               onChange={(e) =>
@@ -327,53 +360,60 @@ const AddProduct = () => {
               }
             />
           </div>
-
+          
           <div style={styles.inputGroup}>
-            <label style={styles.label}>Product Image</label>
-            <input
-              type="file"
-              accept="image/*"
-              style={styles.fileInput}
-              onChange={handleImageUpload}
-              disabled={uploading}
-            />
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "15px",
-                marginTop: "15px",
-              }}
-            >
-              {preview && (
-                <img src={preview} alt="Preview" style={styles.imagePreview} />
-              )}
-              {uploading && (
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "5px",
-                    color: colors.secondary,
-                  }}
-                >
-                  <Loader2 size={20} className="animate-spin" />
-                  <span>Uploading to Cloudinary...</span>
-                </div>
-              )}
-              {!uploading && productData.image && (
-                <div
-                  style={{
-                    color: "#2e7d32",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "5px",
-                  }}
-                >
-                  <CheckCircle2 size={20} /> <span>Image Secured!</span>
-                </div>
-              )}
+            <label style={styles.label}>Product Gallery</label>
+            <div style={styles.fileInputContainer}>
+              <ImageIcon
+                size={24}
+                style={{ color: colors.secondary, marginBottom: "8px" }}
+              />
+              <input
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={handleImageUpload}
+                disabled={uploading}
+                style={{
+                  opacity: 0,
+                  position: "absolute",
+                  inset: 0,
+                  cursor: "pointer",
+                }}
+              />
+              <p style={{ margin: 0, fontSize: "0.85rem", color: "#666" }}>
+                Select multiple photos of your product
+              </p>
             </div>
+
+            <div style={styles.previewGrid}>
+              {previews.map((src, index) => (
+                <div key={index} style={styles.previewItem}>
+                  <img src={src} alt="preview" style={styles.previewImg} />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(index)}
+                    style={styles.removeBtn}
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+            {uploading && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  marginTop: "10px",
+                  color: colors.secondary,
+                }}
+              >
+                <Loader2 size={18} className="animate-spin" />
+                <span style={{ fontSize: "0.85rem" }}>Uploading images...</span>
+              </div>
+            )}
           </div>
 
           <button
@@ -386,7 +426,7 @@ const AddProduct = () => {
             ) : (
               <PlusCircle size={20} />
             )}
-            {loading ? "Saving to Database..." : "List Product"}
+            {loading ? "Listing Product..." : "Add Product to Market"}
           </button>
         </form>
       </div>
