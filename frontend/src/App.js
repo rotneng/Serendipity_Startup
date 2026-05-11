@@ -6,6 +6,8 @@ import Home from "./Containers/Home";
 import Navbar from "./Containers/Navbar";
 import AddProduct from "./Containers/AddProduct";
 import ProductDetails from "./Containers/ProductDetails";
+import Marketplace from "./Containers/Marketplace";
+import Profile from "./Containers/Profile";
 
 function App() {
   return (
@@ -17,6 +19,8 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/add-product" element={<AddProduct />} />
         <Route path="/product/:id" element={<ProductDetails />} />
+        <Route path="/products" element={<Marketplace />} />
+        <Route path="/profile" element={<Profile />} />
       </Routes>
     </Router>
   );

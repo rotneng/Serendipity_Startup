@@ -43,25 +43,27 @@ export const addProduct = (productData) => async (dispatch, getState) => {
   }
 };
 
-export const getProducts = () => async (dispatch) => {
-  try {
-    dispatch({ type: productConstants.GET_PRODUCTS_REQUEST });
+export const getProducts =
+  (keyword = "") =>
+  async (dispatch) => {
+    try {
+      dispatch({ type: productConstants.GET_PRODUCTS_REQUEST });
 
-    const { data } = await axios.get("http://localhost:5000/api/products");
+      const { data } = await axios.get(
+        `http://localhost:5000/api/products?keyword=${keyword}`,
+      );
 
-    const productsArray = data.products || data.data || data;
-
-    dispatch({
-      type: productConstants.GET_PRODUCTS_SUCCESS,
-      payload: Array.isArray(productsArray) ? productsArray : [],
-    });
-  } catch (error) {
-    dispatch({
-      type: productConstants.GET_PRODUCTS_FAIL,
-      payload: error.response?.data?.message || "Could not load products.",
-    });
-  }
-};
+      dispatch({
+        type: productConstants.GET_PRODUCTS_SUCCESS,
+        payload: data.products,
+      });
+    } catch (error) {
+      dispatch({
+        type: productConstants.GET_PRODUCTS_FAIL,
+        payload: error.response?.data?.message || "Error loading products",
+      });
+    }
+  };
 
 export const deleteProduct = (id) => async (dispatch, getState) => {
   try {
@@ -98,7 +100,9 @@ export const getProductDetails = (id) => async (dispatch) => {
   try {
     dispatch({ type: productConstants.GET_PRODUCT_DETAILS_REQUEST });
 
-    const { data } = await axios.get(`http://localhost:5000/api/products/${id}`);
+    const { data } = await axios.get(
+      `http://localhost:5000/api/products/${id}`,
+    );
 
     dispatch({
       type: productConstants.GET_PRODUCT_DETAILS_SUCCESS,

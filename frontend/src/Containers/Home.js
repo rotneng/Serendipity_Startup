@@ -1,11 +1,12 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { Link } from "react-router-dom";
-import { ShoppingBasket, Sprout, MapPin, Search, Loader2 } from "lucide-react";
+import { MapPin, Search, Loader2, X } from "lucide-react";
 import { getProducts } from "../Actions/productActions";
 
 const Home = () => {
   const dispatch = useDispatch();
+  const [keyword, setKeyword] = useState("");
 
   const auth = useSelector((state) => state.auth);
   const { user, isAuthenticated } = auth;
@@ -14,8 +15,15 @@ const Home = () => {
   const { products, loading, error } = productList || { products: [] };
 
   useEffect(() => {
-    dispatch(getProducts());
-  }, [dispatch]);
+    const delayDebounceFn = setTimeout(() => {
+      dispatch(getProducts(keyword));
+    }, 300);
+    return () => clearTimeout(delayDebounceFn);
+  }, [keyword, dispatch]);
+
+  const clearSearch = () => {
+    setKeyword("");
+  };
 
   const styles = {
     container: {
@@ -36,6 +44,7 @@ const Home = () => {
     },
     searchBar: {
       display: "flex",
+      alignItems: "center",
       background: "white",
       padding: "5px",
       borderRadius: "50px",
@@ -51,6 +60,7 @@ const Home = () => {
       borderRadius: "50px",
       outline: "none",
       fontSize: "1rem",
+      color: "#333",
     },
     searchBtn: {
       backgroundColor: "#2e7d32",
@@ -60,6 +70,9 @@ const Home = () => {
       color: "white",
       cursor: "pointer",
       fontWeight: "bold",
+      display: "flex",
+      alignItems: "center",
+      gap: "8px",
     },
     section: { padding: "60px 10%", backgroundColor: "#f9fbf9" },
     grid: {
@@ -96,18 +109,31 @@ const Home = () => {
         </h1>
         <p style={{ fontSize: "1.2rem", maxWidth: "700px" }}>
           Connecting Plateau State farmers directly with consumers.
-          {user?.role === "farmer"
-            ? " Manage your harvests and reach more customers today."
-            : " Discover organic produce grown in the heart of Nigeria."}
         </p>
-
         <div style={styles.searchBar}>
           <input
             type="text"
-            placeholder="Search for Irish potatoes, tomatoes, strawberries..."
+            placeholder="Type to find Irish potatoes, tomatoes, strawberries..."
             style={styles.input}
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
           />
-          <button style={styles.searchBtn}>Search</button>
+          {keyword && (
+            <button
+              onClick={clearSearch}
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: "0 10px",
+              }}
+            >
+              <X size={20} color="#666" />
+            </button>
+          )}
+          <div style={{ paddingRight: "20px", color: "#2e7d32" }}>
+            <Search size={22} />
+          </div>
         </div>
       </section>
 
@@ -119,17 +145,19 @@ const Home = () => {
             alignItems: "center",
           }}
         >
-          <h2>Featured Produce</h2>
-          <Link
-            to="/products"
-            style={{
-              color: "#2e7d32",
-              fontWeight: "bold",
-              textDecoration: "none",
-            }}
-          >
-            View All
-          </Link>
+          <h2>{keyword ? `Results for "${keyword}"` : "Featured Produce"}</h2>
+          {!keyword && (
+            <Link
+              to="/products"
+              style={{
+                color: "#2e7d32",
+                fontWeight: "bold",
+                textDecoration: "none",
+              }}
+            >
+              View All
+            </Link>
+          )}
         </div>
 
         {loading ? (
@@ -146,24 +174,17 @@ const Home = () => {
         ) : (
           <div style={styles.grid}>
             {products && products.length > 0 ? (
-              products.slice(0, 6).map((item) => (
+              (keyword ? products : products.slice(0, 6)).map((item) => (
                 <div key={item._id} style={styles.card}>
                   <img
                     src={
-                      (typeof item.image === "string"
-                        ? item.image
-                        : item.image?.url) ||
-                      item.images?.[0]?.url ||
-                      "https://via.placeholder.com/400"
+                      item.images?.[0]?.url || "https://via.placeholder.com/400"
                     }
                     alt={item.name}
                     style={{
                       width: "100%",
                       height: "200px",
                       objectFit: "cover",
-                    }}
-                    onError={(e) => {
-                      e.target.src = "https://via.placeholder.com/400";
                     }}
                   />
                   <div style={styles.cardContent}>
@@ -176,7 +197,7 @@ const Home = () => {
                     >
                       <span style={styles.badge}>{item.category}</span>
                       <span style={{ fontWeight: "bold", color: "#2e7d32" }}>
-                        ₦{item.price}
+                        ₦{item.price?.toLocaleString()}
                       </span>
                     </div>
                     <h3 style={{ marginBottom: "5px" }}>{item.name}</h3>
@@ -184,23 +205,13 @@ const Home = () => {
                       style={{
                         fontSize: "0.85rem",
                         color: "#666",
-                        marginBottom: "5px",
+                        marginBottom: "10px",
                         display: "flex",
                         alignItems: "center",
                         gap: "4px",
                       }}
                     >
                       <MapPin size={14} /> {item.location || "Plateau State"}
-                    </p>
-                    <p
-                      style={{
-                        fontSize: "0.85rem",
-                        color: "#2e7d32",
-                        marginBottom: "10px",
-                        fontWeight: "500",
-                      }}
-                    >
-                      Stock: {item.stockQuantity || 0} available
                     </p>
                     <Link
                       to={`/product/${item._id}`}
@@ -215,6 +226,7 @@ const Home = () => {
                           border: "none",
                           borderRadius: "6px",
                           cursor: "pointer",
+                          fontWeight: "bold",
                         }}
                       >
                         View Details
@@ -224,7 +236,28 @@ const Home = () => {
                 </div>
               ))
             ) : (
-              <p>No products available yet. Check back soon!</p>
+              <div
+                style={{
+                  textAlign: "center",
+                  gridColumn: "1 / -1",
+                  padding: "40px",
+                }}
+              >
+                <p>No products found matching "{keyword}".</p>
+                <button
+                  onClick={clearSearch}
+                  style={{
+                    color: "#2e7d32",
+                    border: "none",
+                    background: "none",
+                    cursor: "pointer",
+                    fontWeight: "bold",
+                    marginTop: "10px",
+                  }}
+                >
+                  Clear search to see all harvests
+                </button>
+              </div>
             )}
           </div>
         )}
@@ -241,8 +274,7 @@ const Home = () => {
         >
           <h2>Have a new harvest?</h2>
           <p>
-            List your products now and reach thousands of buyers across the
-            state.
+            List your products now and reach thousands of buyers across Nigeria.
           </p>
           <Link to="/add-product">
             <button
@@ -251,6 +283,7 @@ const Home = () => {
                 backgroundColor: "white",
                 color: "#2e7d32",
                 marginTop: "20px",
+                marginInline: "auto",
               }}
             >
               Upload Product

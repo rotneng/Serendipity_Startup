@@ -46,18 +46,30 @@ exports.createProduct = async (req, res) => {
 
 exports.getProducts = async (req, res) => {
   try {
-    const products = await Product.find().populate(
+    const keyword = req.query.keyword
+      ? {
+          name: {
+            $regex: req.query.keyword,
+            $options: "i",
+          },
+        }
+      : {};
+    const products = await Product.find({ ...keyword }).populate(
       "farmer",
-      "name location phoneNumber",
+      "name location",
     );
-    res
-      .status(200)
-      .json({ success: true, count: products.length, products: products });
+
+    res.status(200).json({
+      success: true,
+      count: products.length,
+      products,
+    });
   } catch (err) {
-    res.status(500).json({ success: false, message: "Server Error" });
+    res
+      .status(500)
+      .json({ success: false, message: "Search failed on server" });
   }
 };
-
 exports.updateProduct = async (req, res) => {
   try {
     let product = await Product.findById(req.params.id);
