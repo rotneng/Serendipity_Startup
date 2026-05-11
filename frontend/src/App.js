@@ -5,6 +5,7 @@ import Signin from "./Containers/Signin";
 import Home from "./Containers/Home";
 import Navbar from "./Containers/Navbar";
 import AddProduct from "./Containers/AddProduct";
+import ProductDetails from "./Containers/ProductDetails";
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
         <Route path="/signin" element={<Signin />} />
         <Route path="/" element={<Home />} />
         <Route path="/add-product" element={<AddProduct />} />
+        <Route path="/product/:id" element={<ProductDetails />} />
       </Routes>
     </Router>
   );

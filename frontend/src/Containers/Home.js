@@ -10,7 +10,7 @@ const Home = () => {
   const auth = useSelector((state) => state.auth);
   const { user, isAuthenticated } = auth;
 
-  const productList = useSelector((state) => state.product);
+  const productList = useSelector((state) => state.productReducer);
   const { products, loading, error } = productList || { products: [] };
 
   useEffect(() => {
@@ -202,19 +202,24 @@ const Home = () => {
                     >
                       Stock: {item.stockQuantity || 0} available
                     </p>
-                    <button
-                      style={{
-                        width: "100%",
-                        padding: "10px",
-                        backgroundColor: "#2e7d32",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "6px",
-                        cursor: "pointer",
-                      }}
+                    <Link
+                      to={`/product/${item._id}`}
+                      style={{ textDecoration: "none" }}
                     >
-                      View Details
-                    </button>
+                      <button
+                        style={{
+                          width: "100%",
+                          padding: "10px",
+                          backgroundColor: "#2e7d32",
+                          color: "white",
+                          border: "none",
+                          borderRadius: "6px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        View Details
+                      </button>
+                    </Link>
                   </div>
                 </div>
               ))

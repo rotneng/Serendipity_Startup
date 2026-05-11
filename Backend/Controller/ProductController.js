@@ -1,6 +1,28 @@
 const Product = require("../Model/ProductModel");
 const { cloudinary } = require("../Util/cloudinary");
 
+exports.getProductDetails = async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id).populate(
+      "farmer",
+      "name location phoneNumber",
+    );
+
+    if (!product) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found" });
+    }
+
+    res.status(200).json({ success: true, product: product });
+  } catch (err) {
+    console.error("Get Product Error:", err.message);
+    res
+      .status(400)
+      .json({ success: false, message: "Invalid Product ID or Server Error" });
+  }
+};
+
 exports.createProduct = async (req, res) => {
   try {
     if (!req.body.images || req.body.images.length === 0) {
@@ -55,17 +77,10 @@ exports.updateProduct = async (req, res) => {
         .json({ success: false, message: "Not authorized" });
     }
 
-    if (req.body.images) {
-      product = await Product.findByIdAndUpdate(req.params.id, req.body, {
-        new: true,
-        runValidators: true,
-      });
-    } else {
-      product = await Product.findByIdAndUpdate(req.params.id, req.body, {
-        new: true,
-        runValidators: true,
-      });
-    }
+    product = await Product.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+      runValidators: true,
+    });
 
     res.status(200).json({ success: true, data: product });
   } catch (err) {
@@ -97,7 +112,6 @@ exports.deleteProduct = async (req, res) => {
       .map((img) => cloudinary.uploader.destroy(img.public_id));
 
     await Promise.all(deletePromises);
-
     await product.deleteOne();
 
     res.status(200).json({
