@@ -5,14 +5,13 @@ import { getProductDetails } from "../Actions/productActions";
 import { addItemsToCart } from "../Actions/cartActions";
 import {
   MapPin,
-  Package,
-  Phone,
   ArrowLeft,
   Loader2,
   ShoppingCart,
   Plus,
   Minus,
   CheckCircle,
+  Phone,
 } from "lucide-react";
 
 const ProductDetails = () => {
@@ -23,6 +22,13 @@ const ProductDetails = () => {
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [showToast, setShowToast] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const productState = useSelector(
     (state) => state.productReducer || state.productDetails,
@@ -50,18 +56,15 @@ const ProductDetails = () => {
   };
 
   const handleAddToCart = () => {
-    if (!isAuthenticated) {
-      return navigate("/signin");
-    }
+    if (!isAuthenticated) return navigate("/signin");
     dispatch(addItemsToCart(product._id, quantity));
-
     setShowToast(true);
     setTimeout(() => setShowToast(false), 3000);
   };
 
   const styles = {
     container: {
-      padding: "40px 10%",
+      padding: isMobile ? "20px 15px" : "40px 10%",
       backgroundColor: "#f9fbf9",
       minHeight: "100vh",
       position: "relative",
@@ -82,9 +85,18 @@ const ProductDetails = () => {
       transition: "all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55)",
       fontWeight: "600",
     },
+    detailGrid: {
+      display: "grid",
+      gridTemplateColumns: isMobile ? "1fr" : "minmax(300px, 1fr) 1fr",
+      gap: isMobile ? "20px" : "40px",
+      backgroundColor: "white",
+      padding: isMobile ? "20px" : "30px",
+      borderRadius: "16px",
+      boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+    },
   };
 
-  if (loading) {
+  if (loading)
     return (
       <div
         style={{
@@ -102,26 +114,17 @@ const ProductDetails = () => {
         </p>
       </div>
     );
-  }
 
-  if (error)
-    return (
-      <div style={{ textAlign: "center", padding: "50px", color: "#d32f2f" }}>
-        <h3>Oops! {error}</h3>
-        <Link to="/" style={{ color: "#2e7d32", fontWeight: "bold" }}>
-          Return to Market
-        </Link>
-      </div>
-    );
-  if (!product || Object.keys(product).length === 0)
+  if (error || !product || Object.keys(product).length === 0) {
     return (
       <div style={{ textAlign: "center", padding: "50px" }}>
-        <h3>Product not found.</h3>
+        <h3>{error || "Product not found."}</h3>
         <Link to="/" style={{ color: "#2e7d32", fontWeight: "bold" }}>
           Back to Market
         </Link>
       </div>
     );
+  }
 
   return (
     <div style={styles.container}>
@@ -150,17 +153,7 @@ const ProductDetails = () => {
         <ArrowLeft size={18} /> Back to Market
       </Link>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "minmax(300px, 1fr) 1fr",
-          gap: "40px",
-          backgroundColor: "white",
-          padding: "30px",
-          borderRadius: "16px",
-          boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-        }}
-      >
+      <div style={styles.detailGrid}>
         <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
           <img
             src={
@@ -170,7 +163,7 @@ const ProductDetails = () => {
             alt={product.name}
             style={{
               width: "100%",
-              height: "450px",
+              height: isMobile ? "300px" : "450px",
               objectFit: "cover",
               borderRadius: "12px",
               border: "1px solid #f0f0f0",
@@ -191,8 +184,8 @@ const ProductDetails = () => {
                 alt="Thumb"
                 onClick={() => setSelectedImage(index)}
                 style={{
-                  width: "80px",
-                  height: "80px",
+                  width: "70px",
+                  height: "70px",
                   borderRadius: "8px",
                   cursor: "pointer",
                   objectFit: "cover",
@@ -200,12 +193,20 @@ const ProductDetails = () => {
                     selectedImage === index
                       ? "3px solid #2e7d32"
                       : "1px solid #ddd",
+                  flexShrink: 0,
                 }}
               />
             ))}
           </div>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: "25px" }}>
+
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: isMobile ? "15px" : "25px",
+          }}
+        >
           <div>
             <span
               style={{
@@ -221,7 +222,7 @@ const ProductDetails = () => {
             </span>
             <h1
               style={{
-                fontSize: "2.8rem",
+                fontSize: isMobile ? "1.8rem" : "2.8rem",
                 margin: "10px 0 5px 0",
                 color: "#1a1a1a",
               }}
@@ -233,7 +234,7 @@ const ProductDetails = () => {
             >
               <span
                 style={{
-                  fontSize: "2.2rem",
+                  fontSize: isMobile ? "1.8rem" : "2.2rem",
                   fontWeight: "800",
                   color: "#2e7d32",
                 }}
@@ -243,12 +244,12 @@ const ProductDetails = () => {
               <span
                 style={{
                   color: product.stockQuantity > 0 ? "#777" : "#d32f2f",
-                  fontSize: "1.1rem",
+                  fontSize: "1rem",
                 }}
               >
                 |{" "}
                 {product.stockQuantity > 0
-                  ? `${product.stockQuantity} units available`
+                  ? `${product.stockQuantity} available`
                   : "Out of Stock"}
               </span>
             </div>
@@ -273,13 +274,18 @@ const ProductDetails = () => {
                 flexDirection: "column",
                 gap: "15px",
                 backgroundColor: "#fff",
-                padding: "20px",
+                padding: isMobile ? "10px" : "20px",
                 borderRadius: "12px",
                 border: "1px solid #eee",
               }}
             >
               <div
-                style={{ display: "flex", alignItems: "center", gap: "20px" }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: isMobile ? "space-between" : "flex-start",
+                  gap: "20px",
+                }}
               >
                 <span style={{ fontWeight: "bold" }}>Quantity:</span>
                 <div
@@ -348,6 +354,7 @@ const ProductDetails = () => {
               </button>
             </div>
           )}
+
           <div
             style={{
               padding: "20px",

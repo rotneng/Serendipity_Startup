@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -10,11 +10,19 @@ import {
   ShoppingBag,
   PlusCircle,
   MapPin,
+  Loader2,
 } from "lucide-react";
 
 const Profile = () => {
   const navigate = useNavigate();
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const { user, isAuthenticated, loading } = useSelector((state) => state.auth);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -24,7 +32,7 @@ const Profile = () => {
 
   const styles = {
     container: {
-      padding: "40px 10%",
+      padding: isMobile ? "20px 5%" : "40px 10%",
       backgroundColor: "#f9fbf9",
       minHeight: "100vh",
       fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
@@ -32,29 +40,34 @@ const Profile = () => {
     profileCard: {
       background: "white",
       borderRadius: "15px",
-      padding: "30px",
+      padding: isMobile ? "20px" : "30px",
       boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
       display: "flex",
+      flexDirection: isMobile ? "column" : "row",
       alignItems: "center",
-      gap: "30px",
+      textAlign: isMobile ? "center" : "left",
+      gap: isMobile ? "15px" : "30px",
       marginBottom: "30px",
     },
     avatar: {
-      width: "120px",
-      height: "120px",
+      width: isMobile ? "100px" : "120px",
+      height: isMobile ? "100px" : "120px",
       borderRadius: "50%",
       backgroundColor: "#e8f5e9",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
       color: "#2e7d32",
-      fontSize: "3rem",
+      fontSize: isMobile ? "2.5rem" : "3rem",
       fontWeight: "bold",
       border: "4px solid #2e7d32",
+      flexShrink: 0,
     },
     infoGrid: {
       display: "grid",
-      gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+      gridTemplateColumns: isMobile
+        ? "1fr"
+        : "repeat(auto-fit, minmax(300px, 1fr))",
       gap: "20px",
     },
     actionCard: {
@@ -76,35 +89,74 @@ const Profile = () => {
       color: "white",
       padding: "4px 12px",
       borderRadius: "20px",
-      fontSize: "0.85rem",
+      fontSize: "0.8rem",
       fontWeight: "bold",
       textTransform: "uppercase",
       display: "inline-block",
-      marginTop: "5px",
+      marginBottom: "5px",
+    },
+    metaContainer: {
+      display: "flex",
+      flexDirection: isMobile ? "column" : "row",
+      gap: isMobile ? "5px" : "20px",
+      color: "#666",
+      marginTop: "10px",
+      fontSize: isMobile ? "0.9rem" : "1rem",
     },
   };
 
   if (loading)
     return (
-      <div style={{ textAlign: "center", padding: "100px" }}>
-        Loading Profile...
+      <div
+        style={{ display: "flex", justifyContent: "center", padding: "100px" }}
+      >
+        <Loader2 className="animate-spin" size={40} color="#2e7d32" />
       </div>
     );
 
   return (
     <div style={styles.container}>
-      <h1 style={{ marginBottom: "30px", color: "#2e7d32" }}>My Profile</h1>
+      <h1
+        style={{
+          marginBottom: "30px",
+          color: "#2e7d32",
+          fontSize: isMobile ? "1.5rem" : "2rem",
+          textAlign: isMobile ? "center" : "left",
+        }}
+      >
+        My Profile
+      </h1>
 
       <div style={styles.profileCard}>
         <div style={styles.avatar}>{user?.name?.charAt(0).toUpperCase()}</div>
-        <div>
+        <div style={{ width: "100%" }}>
           <span style={styles.roleBadge}>{user?.role}</span>
-          <h2 style={{ fontSize: "2rem", margin: "5px 0" }}>{user?.name}</h2>
-          <div style={{ display: "flex", gap: "20px", color: "#666" }}>
-            <p style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+          <h2
+            style={{ fontSize: isMobile ? "1.5rem" : "2rem", margin: "5px 0" }}
+          >
+            {user?.name}
+          </h2>
+          <div style={styles.metaContainer}>
+            <p
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: isMobile ? "center" : "flex-start",
+                gap: "5px",
+                margin: 0,
+              }}
+            >
               <Mail size={16} /> {user?.email}
             </p>
-            <p style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+            <p
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: isMobile ? "center" : "flex-start",
+                gap: "5px",
+                margin: 0,
+              }}
+            >
               <Calendar size={16} /> Joined{" "}
               {new Date(user?.createdAt).toLocaleDateString()}
             </p>
@@ -169,6 +221,7 @@ const Profile = () => {
             borderRadius: "8px",
             cursor: "pointer",
             fontWeight: "bold",
+            width: isMobile ? "100%" : "auto",
           }}
         >
           Logout Account
