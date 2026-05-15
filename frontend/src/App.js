@@ -8,6 +8,7 @@ import AddProduct from "./Containers/AddProduct";
 import ProductDetails from "./Containers/ProductDetails";
 import Marketplace from "./Containers/Marketplace";
 import Profile from "./Containers/Profile";
+import Cart from "./Containers/Cart";
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
         <Route path="/product/:id" element={<ProductDetails />} />
         <Route path="/products" element={<Marketplace />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/cart" element={<Cart />} />
       </Routes>
     </Router>
   );

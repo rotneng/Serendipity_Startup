@@ -1,12 +1,22 @@
 import React, { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { Link } from "react-router-dom";
-import { MapPin, Search, Loader2, X } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  MapPin,
+  Search,
+  Loader2,
+  X,
+  ShoppingCart,
+  CheckCircle,
+} from "lucide-react";
 import { getProducts } from "../Actions/productActions";
+import { addItemsToCart } from "../Actions/cartActions";
 
 const Home = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const [keyword, setKeyword] = useState("");
+  const [showToast, setShowToast] = useState(false);
 
   const auth = useSelector((state) => state.auth);
   const { user, isAuthenticated } = auth;
@@ -21,14 +31,39 @@ const Home = () => {
     return () => clearTimeout(delayDebounceFn);
   }, [keyword, dispatch]);
 
-  const clearSearch = () => {
-    setKeyword("");
+  const clearSearch = () => setKeyword("");
+
+  const handleAddToCart = (id) => {
+    if (!isAuthenticated) {
+      return navigate("/signin");
+    }
+    dispatch(addItemsToCart(id, 1));
+
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 3000);
   };
 
   const styles = {
     container: {
       fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
       color: "#333",
+      position: "relative",
+    },
+    toast: {
+      position: "fixed",
+      top: "20px",
+      right: showToast ? "20px" : "-300px",
+      backgroundColor: "#2e7d32",
+      color: "white",
+      padding: "15px 25px",
+      borderRadius: "10px",
+      display: "flex",
+      alignItems: "center",
+      gap: "10px",
+      boxShadow: "0 4px 15px rgba(0,0,0,0.2)",
+      zIndex: 1000,
+      transition: "right 0.5s ease-in-out",
+      fontWeight: "bold",
     },
     hero: {
       height: "60vh",
@@ -62,18 +97,6 @@ const Home = () => {
       fontSize: "1rem",
       color: "#333",
     },
-    searchBtn: {
-      backgroundColor: "#2e7d32",
-      border: "none",
-      borderRadius: "50px",
-      padding: "10px 25px",
-      color: "white",
-      cursor: "pointer",
-      fontWeight: "bold",
-      display: "flex",
-      alignItems: "center",
-      gap: "8px",
-    },
     section: { padding: "60px 10%", backgroundColor: "#f9fbf9" },
     grid: {
       display: "grid",
@@ -97,10 +120,44 @@ const Home = () => {
       fontSize: "0.8rem",
       fontWeight: "bold",
     },
+    btnContainer: { display: "flex", gap: "10px", marginTop: "10px" },
+    viewBtn: {
+      flex: 1,
+      padding: "10px",
+      backgroundColor: "#f0f0f0",
+      color: "#333",
+      border: "none",
+      borderRadius: "6px",
+      cursor: "pointer",
+      fontWeight: "bold",
+      textAlign: "center",
+      textDecoration: "none",
+      fontSize: "0.9rem",
+    },
+    cartBtn: {
+      flex: 1,
+      padding: "10px",
+      backgroundColor: "#2e7d32",
+      color: "white",
+      border: "none",
+      borderRadius: "6px",
+      cursor: "pointer",
+      fontWeight: "bold",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: "5px",
+      fontSize: "0.9rem",
+    },
   };
 
   return (
     <div style={styles.container}>
+      <div style={styles.toast}>
+        <CheckCircle size={20} />
+        Added to Cart!
+      </div>
+
       <section style={styles.hero}>
         <h1 style={{ fontSize: "3.5rem", marginBottom: "10px" }}>
           {isAuthenticated
@@ -113,7 +170,7 @@ const Home = () => {
         <div style={styles.searchBar}>
           <input
             type="text"
-            placeholder="Type to find Irish potatoes, tomatoes, strawberries..."
+            placeholder="Type produce..."
             style={styles.input}
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
@@ -138,28 +195,7 @@ const Home = () => {
       </section>
 
       <section style={styles.section}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <h2>{keyword ? `Results for "${keyword}"` : "Featured Produce"}</h2>
-          {!keyword && (
-            <Link
-              to="/products"
-              style={{
-                color: "#2e7d32",
-                fontWeight: "bold",
-                textDecoration: "none",
-              }}
-            >
-              View All
-            </Link>
-          )}
-        </div>
-
+        <h2>{keyword ? `Results for "${keyword}"` : "Featured Produce"}</h2>
         {loading ? (
           <div style={{ textAlign: "center", padding: "50px" }}>
             <Loader2
@@ -167,10 +203,7 @@ const Home = () => {
               className="animate-spin"
               style={{ color: "#2e7d32" }}
             />
-            <p>Fetching fresh harvests...</p>
           </div>
-        ) : error ? (
-          <p style={{ color: "red" }}>{error}</p>
         ) : (
           <div style={styles.grid}>
             {products && products.length > 0 ? (
@@ -201,96 +234,28 @@ const Home = () => {
                       </span>
                     </div>
                     <h3 style={{ marginBottom: "5px" }}>{item.name}</h3>
-                    <p
-                      style={{
-                        fontSize: "0.85rem",
-                        color: "#666",
-                        marginBottom: "10px",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "4px",
-                      }}
-                    >
-                      <MapPin size={14} /> {item.location || "Plateau State"}
-                    </p>
-                    <Link
-                      to={`/product/${item._id}`}
-                      style={{ textDecoration: "none" }}
-                    >
+                    <div style={styles.btnContainer}>
+                      <Link to={`/product/${item._id}`} style={styles.viewBtn}>
+                        Details
+                      </Link>
                       <button
-                        style={{
-                          width: "100%",
-                          padding: "10px",
-                          backgroundColor: "#2e7d32",
-                          color: "white",
-                          border: "none",
-                          borderRadius: "6px",
-                          cursor: "pointer",
-                          fontWeight: "bold",
-                        }}
+                        style={styles.cartBtn}
+                        onClick={() => handleAddToCart(item._id)}
+                        disabled={item.stockQuantity < 1}
                       >
-                        View Details
+                        <ShoppingCart size={16} />{" "}
+                        {item.stockQuantity < 1 ? "Out" : "Add"}
                       </button>
-                    </Link>
+                    </div>
                   </div>
                 </div>
               ))
             ) : (
-              <div
-                style={{
-                  textAlign: "center",
-                  gridColumn: "1 / -1",
-                  padding: "40px",
-                }}
-              >
-                <p>No products found matching "{keyword}".</p>
-                <button
-                  onClick={clearSearch}
-                  style={{
-                    color: "#2e7d32",
-                    border: "none",
-                    background: "none",
-                    cursor: "pointer",
-                    fontWeight: "bold",
-                    marginTop: "10px",
-                  }}
-                >
-                  Clear search to see all harvests
-                </button>
-              </div>
+              <p>No products found.</p>
             )}
           </div>
         )}
       </section>
-
-      {user?.role === "farmer" && (
-        <section
-          style={{
-            ...styles.section,
-            backgroundColor: "#2e7d32",
-            color: "white",
-            textAlign: "center",
-          }}
-        >
-          <h2>Have a new harvest?</h2>
-          <p>
-            List your products now and reach thousands of buyers across Nigeria.
-          </p>
-          <Link to="/add-product">
-            <button
-              style={{
-                ...styles.searchBtn,
-                backgroundColor: "white",
-                color: "#2e7d32",
-                marginTop: "20px",
-                marginInline: "auto",
-              }}
-            >
-              Upload Product
-            </button>
-          </Link>
-        </section>
-      )}
     </div>
   );
 };

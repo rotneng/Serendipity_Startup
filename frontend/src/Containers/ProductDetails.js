@@ -1,24 +1,88 @@
 import React, { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { getProductDetails } from "../Actions/productActions";
-import { MapPin, Package, Phone, ArrowLeft, Loader2 } from "lucide-react";
+import { addItemsToCart } from "../Actions/cartActions";
+import {
+  MapPin,
+  Package,
+  Phone,
+  ArrowLeft,
+  Loader2,
+  ShoppingCart,
+  Plus,
+  Minus,
+  CheckCircle,
+} from "lucide-react";
 
 const ProductDetails = () => {
   const { id } = useParams();
   const dispatch = useDispatch();
+  const navigate = useNavigate();
+
   const [selectedImage, setSelectedImage] = useState(0);
+  const [quantity, setQuantity] = useState(1);
+  const [showToast, setShowToast] = useState(false);
 
   const productState = useSelector(
     (state) => state.productReducer || state.productDetails,
   );
   const { loading, error, product } = productState || {};
 
+  const { isAuthenticated } = useSelector(
+    (state) => state.auth || state.user || {},
+  );
+
   useEffect(() => {
     if (id) {
       dispatch(getProductDetails(id));
     }
   }, [dispatch, id]);
+
+  const increaseQty = () => {
+    if (product.stockQuantity <= quantity) return;
+    setQuantity(quantity + 1);
+  };
+
+  const decreaseQty = () => {
+    if (1 >= quantity) return;
+    setQuantity(quantity - 1);
+  };
+
+  const handleAddToCart = () => {
+    if (!isAuthenticated) {
+      return navigate("/signin");
+    }
+    dispatch(addItemsToCart(product._id, quantity));
+
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 3000);
+  };
+
+  const styles = {
+    container: {
+      padding: "40px 10%",
+      backgroundColor: "#f9fbf9",
+      minHeight: "100vh",
+      position: "relative",
+    },
+    toast: {
+      position: "fixed",
+      top: "30px",
+      right: showToast ? "30px" : "-400px",
+      backgroundColor: "#2e7d32",
+      color: "white",
+      padding: "16px 24px",
+      borderRadius: "12px",
+      display: "flex",
+      alignItems: "center",
+      gap: "12px",
+      boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
+      zIndex: 2000,
+      transition: "all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55)",
+      fontWeight: "600",
+    },
+  };
 
   if (loading) {
     return (
@@ -40,7 +104,7 @@ const ProductDetails = () => {
     );
   }
 
-  if (error) {
+  if (error)
     return (
       <div style={{ textAlign: "center", padding: "50px", color: "#d32f2f" }}>
         <h3>Oops! {error}</h3>
@@ -49,28 +113,28 @@ const ProductDetails = () => {
         </Link>
       </div>
     );
-  }
-
-  if (!product || Object.keys(product).length === 0) {
+  if (!product || Object.keys(product).length === 0)
     return (
       <div style={{ textAlign: "center", padding: "50px" }}>
         <h3>Product not found.</h3>
-        <p>The item may have been removed or the ID is incorrect.</p>
         <Link to="/" style={{ color: "#2e7d32", fontWeight: "bold" }}>
           Back to Market
         </Link>
       </div>
     );
-  }
 
   return (
-    <div
-      style={{
-        padding: "40px 10%",
-        backgroundColor: "#f9fbf9",
-        minHeight: "100vh",
-      }}
-    >
+    <div style={styles.container}>
+      <div style={styles.toast}>
+        <CheckCircle size={22} />
+        <div>
+          <div style={{ fontSize: "1rem" }}>Added to Cart!</div>
+          <div style={{ fontSize: "0.8rem", opacity: 0.9, fontWeight: "400" }}>
+            {quantity} x {product.name}
+          </div>
+        </div>
+      </div>
+
       <Link
         to="/"
         style={{
@@ -101,7 +165,7 @@ const ProductDetails = () => {
           <img
             src={
               product.images?.[selectedImage]?.url ||
-              "https://via.placeholder.com/400?text=No+Image+Available"
+              "https://via.placeholder.com/400"
             }
             alt={product.name}
             style={{
@@ -112,7 +176,6 @@ const ProductDetails = () => {
               border: "1px solid #f0f0f0",
             }}
           />
-
           <div
             style={{
               display: "flex",
@@ -125,7 +188,7 @@ const ProductDetails = () => {
               <img
                 key={index}
                 src={img.url}
-                alt={`Thumbnail ${index}`}
+                alt="Thumb"
                 onClick={() => setSelectedImage(index)}
                 style={{
                   width: "80px",
@@ -137,13 +200,11 @@ const ProductDetails = () => {
                     selectedImage === index
                       ? "3px solid #2e7d32"
                       : "1px solid #ddd",
-                  transition: "all 0.2s ease",
                 }}
               />
             ))}
           </div>
         </div>
-
         <div style={{ display: "flex", flexDirection: "column", gap: "25px" }}>
           <div>
             <span
@@ -154,7 +215,6 @@ const ProductDetails = () => {
                 borderRadius: "20px",
                 fontSize: "0.85rem",
                 fontWeight: "bold",
-                textTransform: "uppercase",
               }}
             >
               {product.category}
@@ -168,121 +228,159 @@ const ProductDetails = () => {
             >
               {product.name}
             </h1>
-          </div>
-
-          <div style={{ display: "flex", alignItems: "baseline", gap: "15px" }}>
-            <span
-              style={{
-                fontSize: "2.2rem",
-                fontWeight: "800",
-                color: "#2e7d32",
-              }}
+            <div
+              style={{ display: "flex", alignItems: "baseline", gap: "15px" }}
             >
-              ₦{Number(product.price).toLocaleString()}
-            </span>
-            <span style={{ color: "#777", fontSize: "1.1rem" }}>
-              |{" "}
-              {product.stockQuantity > 0
-                ? `${product.stockQuantity} units available`
-                : "Out of Stock"}
-            </span>
+              <span
+                style={{
+                  fontSize: "2.2rem",
+                  fontWeight: "800",
+                  color: "#2e7d32",
+                }}
+              >
+                ₦{Number(product.price).toLocaleString()}
+              </span>
+              <span
+                style={{
+                  color: product.stockQuantity > 0 ? "#777" : "#d32f2f",
+                  fontSize: "1.1rem",
+                }}
+              >
+                |{" "}
+                {product.stockQuantity > 0
+                  ? `${product.stockQuantity} units available`
+                  : "Out of Stock"}
+              </span>
+            </div>
           </div>
 
-          <div
+          <p
             style={{
+              color: "#555",
+              lineHeight: "1.8",
+              margin: 0,
               borderTop: "1px solid #eee",
-              borderBottom: "1px solid #eee",
-              padding: "20px 0",
+              paddingTop: "20px",
             }}
           >
-            <h3 style={{ margin: "0 0 10px 0", fontSize: "1.1rem" }}>
-              Description
-            </h3>
-            <p style={{ color: "#555", lineHeight: "1.8", margin: 0 }}>
-              {product.description}
-            </p>
-          </div>
+            {product.description}
+          </p>
 
-          <div
-            style={{ display: "flex", flexDirection: "column", gap: "12px" }}
-          >
+          {product.stockQuantity > 0 && (
             <div
               style={{
                 display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                color: "#444",
+                flexDirection: "column",
+                gap: "15px",
+                backgroundColor: "#fff",
+                padding: "20px",
+                borderRadius: "12px",
+                border: "1px solid #eee",
               }}
             >
-              <MapPin size={20} color="#2e7d32" />
-              <strong>Location:</strong> {product.location}
-            </div>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                color: "#444",
-              }}
-            >
-              <Package size={20} color="#2e7d32" />
-              <strong>Category:</strong> {product.category}
-            </div>
-          </div>
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "20px" }}
+              >
+                <span style={{ fontWeight: "bold" }}>Quantity:</span>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    border: "1px solid #ccc",
+                    borderRadius: "8px",
+                  }}
+                >
+                  <button
+                    onClick={decreaseQty}
+                    style={{
+                      padding: "8px 12px",
+                      border: "none",
+                      background: "none",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <Minus size={16} />
+                  </button>
+                  <span
+                    style={{
+                      padding: "0 15px",
+                      fontWeight: "bold",
+                      minWidth: "30px",
+                      textAlign: "center",
+                    }}
+                  >
+                    {quantity}
+                  </span>
+                  <button
+                    onClick={increaseQty}
+                    style={{
+                      padding: "8px 12px",
+                      border: "none",
+                      background: "none",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <Plus size={16} />
+                  </button>
+                </div>
+              </div>
 
+              <button
+                onClick={handleAddToCart}
+                style={{
+                  width: "100%",
+                  padding: "18px",
+                  backgroundColor: "#2e7d32",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "10px",
+                  fontSize: "1.2rem",
+                  fontWeight: "bold",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "12px",
+                  boxShadow: "0 4px 15px rgba(46, 125, 50, 0.2)",
+                }}
+              >
+                <ShoppingCart size={22} /> Add to Cart
+              </button>
+            </div>
+          )}
           <div
             style={{
-              marginTop: "10px",
-              padding: "25px",
+              padding: "20px",
               backgroundColor: "#f1f8f1",
               borderRadius: "14px",
               border: "1px dashed #2e7d32",
             }}
           >
-            <h4
-              style={{
-                margin: "0 0 15px 0",
-                color: "#2e7d32",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-              }}
-            >
-              Farmer Information
+            <h4 style={{ margin: "0 0 10px 0", color: "#2e7d32" }}>
+              Farmer Contact
             </h4>
-            <div style={{ marginBottom: "15px" }}>
-              <p style={{ margin: "5px 0" }}>
-                <strong>Name:</strong>{" "}
-                {product.farmer?.name || "Local Plateau Farmer"}
-              </p>
-              <p style={{ margin: "5px 0" }}>
-                <strong>Phone:</strong>{" "}
-                {product.farmer?.phoneNumber || "Not provided"}
-              </p>
-            </div>
-
+            <p style={{ margin: "5px 0" }}>
+              <strong>Name:</strong> {product.farmer?.name || "Local Farmer"}
+            </p>
             <button
+              onClick={() => window.open(`tel:${product.farmer?.phoneNumber}`)}
               style={{
                 width: "100%",
-                padding: "16px",
-                backgroundColor: "#2e7d32",
-                color: "white",
-                border: "none",
-                borderRadius: "10px",
-                fontSize: "1.1rem",
+                marginTop: "10px",
+                padding: "12px",
+                backgroundColor: "white",
+                color: "#2e7d32",
+                border: "2px solid #2e7d32",
+                borderRadius: "8px",
                 fontWeight: "bold",
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: "12px",
-                transition: "background 0.3s ease",
+                gap: "8px",
               }}
-              onMouseOver={(e) => (e.target.style.backgroundColor = "#1b5e20")}
-              onMouseOut={(e) => (e.target.style.backgroundColor = "#2e7d32")}
-              onClick={() => window.open(`tel:${product.farmer?.phoneNumber}`)}
             >
-              <Phone size={20} /> Contact Farmer Directly
+              <Phone size={18} /> Call Farmer
             </button>
           </div>
         </div>

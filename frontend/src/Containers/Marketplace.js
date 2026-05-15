@@ -1,13 +1,24 @@
 import React, { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { Link } from "react-router-dom";
-import { MapPin, Search, Loader2, X, ChevronRight } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  MapPin,
+  Search,
+  Loader2,
+  X,
+  ChevronRight,
+  ShoppingCart,
+  CheckCircle,
+} from "lucide-react";
 import { getProducts } from "../Actions/productActions";
+import { addItemsToCart } from "../Actions/cartActions";
 
 const Marketplace = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const [keyword, setKeyword] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
+  const [showToast, setShowToast] = useState(false);
 
   const categories = [
     "All",
@@ -22,13 +33,25 @@ const Marketplace = () => {
   const productList = useSelector((state) => state.productReducer);
   const { products, loading, error } = productList || { products: [] };
 
+  const { isAuthenticated } = useSelector((state) => state.auth || {});
+
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       dispatch(getProducts(keyword));
     }, 300);
-
     return () => clearTimeout(delayDebounceFn);
   }, [keyword, dispatch]);
+
+  const addToCartHandler = (id) => {
+    if (!isAuthenticated) {
+      alert("Please login to add items to cart");
+      return navigate("/signin");
+    }
+    dispatch(addItemsToCart(id, 1));
+
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 3000);
+  };
 
   const filteredProducts = products?.filter((item) => {
     const matchesCategory =
@@ -42,6 +65,23 @@ const Marketplace = () => {
       minHeight: "100vh",
       backgroundColor: "#f9fbf9",
       fontFamily: "'Segoe UI', sans-serif",
+      position: "relative",
+    },
+    toast: {
+      position: "fixed",
+      top: "20px",
+      right: showToast ? "20px" : "-300px",
+      backgroundColor: "#2e7d32",
+      color: "white",
+      padding: "12px 20px",
+      borderRadius: "8px",
+      display: "flex",
+      alignItems: "center",
+      gap: "10px",
+      boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+      zIndex: 1000,
+      transition: "right 0.3s ease-in-out",
+      fontWeight: "600",
     },
     sidebar: {
       width: "260px",
@@ -84,12 +124,29 @@ const Marketplace = () => {
       borderRadius: "12px",
       overflow: "hidden",
       boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+      transition: "transform 0.2s",
+    },
+    addToCartBtn: {
+      padding: "8px",
+      backgroundColor: "#e8f5e9",
+      color: "#2e7d32",
+      border: "none",
+      borderRadius: "5px",
+      cursor: "pointer",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      transition: "0.2s",
     },
   };
 
   return (
     <div style={styles.container}>
-      {/* SIDEBAR */}
+      <div style={styles.toast}>
+        <CheckCircle size={18} />
+        Item added to cart!
+      </div>
+
       <aside style={styles.sidebar}>
         <h3 style={{ marginBottom: "20px", color: "#2e7d32" }}>Categories</h3>
         <div style={{ display: "flex", flexDirection: "column" }}>
@@ -112,7 +169,7 @@ const Marketplace = () => {
       <main style={styles.mainContent}>
         <header style={{ marginBottom: "30px" }}>
           <h1 style={{ fontSize: "2rem", marginBottom: "10px" }}>
-            Plateau Marketplace
+            Marketplace
           </h1>
           <div style={styles.searchBox}>
             <Search size={20} color="#666" />
@@ -149,7 +206,11 @@ const Marketplace = () => {
           <div style={styles.grid}>
             {filteredProducts.length > 0 ? (
               filteredProducts.map((item) => (
-                <div key={item._id} style={styles.card}>
+                <div
+                  key={item._id}
+                  style={styles.card}
+                  className="product-card"
+                >
                   <img
                     src={
                       item.images?.[0]?.url || "https://via.placeholder.com/400"
@@ -197,20 +258,37 @@ const Marketplace = () => {
                       <span style={{ fontWeight: "bold", fontSize: "1.1rem" }}>
                         ₦{item.price?.toLocaleString()}
                       </span>
-                      <Link to={`/product/${item._id}`}>
+
+                      <div style={{ display: "flex", gap: "8px" }}>
                         <button
-                          style={{
-                            padding: "8px 15px",
-                            backgroundColor: "#2e7d32",
-                            color: "white",
-                            border: "none",
-                            borderRadius: "5px",
-                            cursor: "pointer",
-                          }}
+                          style={styles.addToCartBtn}
+                          title="Quick Add"
+                          onClick={() => addToCartHandler(item._id)}
+                          onMouseOver={(e) =>
+                            (e.currentTarget.style.backgroundColor = "#c8e6c9")
+                          }
+                          onMouseOut={(e) =>
+                            (e.currentTarget.style.backgroundColor = "#e8f5e9")
+                          }
                         >
-                          Details
+                          <ShoppingCart size={18} />
                         </button>
-                      </Link>
+
+                        <Link to={`/product/${item._id}`}>
+                          <button
+                            style={{
+                              padding: "8px 15px",
+                              backgroundColor: "#2e7d32",
+                              color: "white",
+                              border: "none",
+                              borderRadius: "5px",
+                              cursor: "pointer",
+                            }}
+                          >
+                            Details
+                          </button>
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -223,7 +301,7 @@ const Marketplace = () => {
                   padding: "50px",
                 }}
               >
-                <p>No products found in this category matching "{keyword}".</p>
+                <p>No products found matching your criteria.</p>
               </div>
             )}
           </div>
